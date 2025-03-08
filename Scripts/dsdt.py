@@ -410,6 +410,49 @@ class DSDT:
             if disassemble:
                 return self.load(res)
             return res
+        elif sys.platform == "darwin":
+            target = os.path.join(os.path.dirname(os.path.realpath(__file__)),"acpidump")
+            if os.path.exists(target):
+                # Dump to the target folder
+                print("Dumping tables to {}...".format(res))
+                cwd = os.getcwd()
+                os.chdir(res)
+                out = self.r.run({"args":[target,"-b"]})
+                os.chdir(cwd)
+                if out[2] != 0:
+                    print(" - {}".format(out[1]))
+                    return
+                # Make sure we have a DSDT
+                if not next((x for x in os.listdir(res) if x.lower().startswith("dsdt.")),None):
+                    # We need to try and dump the DSDT individually - this sometimes
+                    # happens on older Windows installs or odd OEM machines
+                    print(" - DSDT not found - dumping by signature...")
+                    os.chdir(res)
+                    out = self.r.run({"args":[target,"-b","-n","DSDT"]})
+                    os.chdir(cwd)
+                    if out[2] != 0:
+                        print(" - {}".format(out[1]))
+                        return
+                # Iterate the dumped files and ensure the names are uppercase, and the
+                # extension used is .aml, not the default .dat
+                print("Updating names...")
+                for f in os.listdir(res):
+                    new_name = f.upper()
+                    if new_name.endswith(".DAT"):
+                        new_name = new_name[:-4]+".aml"
+                    if new_name != f:
+                        # Something changed - print it and rename it
+                        try:
+                            os.rename(os.path.join(res,f),os.path.join(res,new_name))
+                        except Exception as e:
+                            print(" - {} -> {} failed: {}".format(f,new_name,e))
+                print("Dump successful!")
+                if disassemble:
+                    return self.load(res)
+                return res
+            else:
+                print("Failed to locate acpidump")
+                return
 
     def check_output(self, output):
         t_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), output)

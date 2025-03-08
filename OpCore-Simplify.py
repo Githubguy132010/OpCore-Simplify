@@ -44,7 +44,7 @@ class OCPE:
         while True:
             self.u.head("Select hardware report")
             print("")
-            if os.name == "nt":
+            if os.name == "nt" or os.name == "posix":
                 print("\033[1;36m", end="")
                 print("Note:")
                 print("- Ensure you are using the latest version of Hardware Sniffer before generating the hardware report.")

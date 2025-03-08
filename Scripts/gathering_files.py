@@ -228,7 +228,7 @@ class gatheringFiles:
             return []
         
     def gather_hardware_sniffer(self):
-        if os.name != "nt":
+        if os.name not in ["nt", "posix"]:
             return
         
         self.utils.head("Gathering Files")
@@ -236,7 +236,7 @@ class gatheringFiles:
         print("Please wait for download Hardware Sniffer")
         print("")
 
-        hardware_sniffer_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Hardware-Sniffer-CLI.exe")
+        hardware_sniffer_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Hardware-Sniffer-CLI.exe" if os.name == "nt" else "Hardware-Sniffer-CLI")
 
         hardware_sniffer_cli = None
 
@@ -270,12 +270,15 @@ class gatheringFiles:
             self.utils.create_folder(os.path.dirname(self.download_history_file))
             self.utils.write_file(self.download_history_file, download_history)
 
+            if os.name != "nt":
+                subprocess.run(["chmod", "+x", hardware_sniffer_path])
+
             return hardware_sniffer_path
         except:
             print("Could not complete download Hardware Sniffer.")
             print("Please download Hardware Sniffer CLI manually and place it in \"Scripts\" folder.")
             if hardware_sniffer_cli:
-                print("You can manually download \"Hardware-Sniffer-CLI.exe\" from:\n   {}\n".format(hardware_sniffer_cli.get("url")))
+                print("You can manually download \"Hardware-Sniffer-CLI{}\" from:\n   {}\n".format(".exe" if os.name == "nt" else "", hardware_sniffer_cli.get("url")))
             print("Alternatively, export the hardware report manually to continue.")
             print("")
             self.utils.request_input()
