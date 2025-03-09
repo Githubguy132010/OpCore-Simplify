@@ -44,11 +44,20 @@ class OCPE:
         while True:
             self.u.head("Select hardware report")
             print("")
-            if os.name == "nt" or os.name == "posix":
+            if os.name == "nt":
                 print("\033[1;36m", end="")
                 print("Note:")
                 print("- Ensure you are using the latest version of Hardware Sniffer before generating the hardware report.")
                 print("- Hardware Sniffer will not collect information related to Resizable BAR option of GPU (disabled by default) and monitor connections in Windows PE.")
+                print("\033[0m", end="")
+                if self.hardware_sniffer:
+                    print("")
+                    print("E. Export hardware report (Recommended)")
+                print("")
+            elif os.name == "posix":
+                print("\033[1;36m", end="")
+                print("Note:")
+                print("- Ensure you have lshw installed before generating the hardware report.")
                 print("\033[0m", end="")
                 if self.hardware_sniffer:
                     print("")
@@ -61,24 +70,43 @@ class OCPE:
             if user_input.lower() == "q":
                 self.u.exit_program()
             if self.hardware_sniffer and user_input.lower() == "e":
-                output = self.r.run({
-                    "args":[self.hardware_sniffer, "-e"]
-                })
-                
-                if output[-1] != 0:
-                    print("")
-                    print("Could not export the hardware report. Please export it manually using Hardware Sniffer.")
-                    print("")
-                    self.u.request_input()
-                    return
-                else:
-                    report_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "SysReport", "Report.json")
-                    acpitables_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "SysReport", "ACPI")
-
-                    report_data = self.u.read_file(report_path)
-                    self.ac.read_acpi_tables(acpitables_dir)
+                if os.name == "nt":
+                    output = self.r.run({
+                        "args":[self.hardware_sniffer, "-e"]
+                    })
                     
-                    return report_path, report_data
+                    if output[-1] != 0:
+                        print("")
+                        print("Could not export the hardware report. Please export it manually using Hardware Sniffer.")
+                        print("")
+                        self.u.request_input()
+                        return
+                    else:
+                        report_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "SysReport", "Report.json")
+                        acpitables_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "SysReport", "ACPI")
+
+                        report_data = self.u.read_file(report_path)
+                        self.ac.read_acpi_tables(acpitables_dir)
+                        
+                        return report_path, report_data
+                elif os.name == "posix":
+                    lshw_output_path = self.o.gather_hardware_sniffer()
+                    if not lshw_output_path:
+                        print("")
+                        print("Could not gather hardware information using lshw.")
+                        print("Please ensure lshw is installed and try again.")
+                        print("")
+                        self.u.request_input()
+                        return
+                    else:
+                        report_data = self.o.parse_lshw_json(lshw_output_path)
+                        if not report_data:
+                            print("")
+                            print("Error parsing lshw JSON output.")
+                            print("")
+                            self.u.request_input()
+                            return
+                        return lshw_output_path, report_data
                 
             path = self.u.normalize_path(user_input)
             data = self.u.read_file(path)

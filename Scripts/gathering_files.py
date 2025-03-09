@@ -6,6 +6,7 @@ import os
 import tempfile
 import shutil
 import subprocess
+import json
 
 class gatheringFiles:
     def __init__(self):
@@ -106,7 +107,6 @@ class gatheringFiles:
                 shutil.move(source_config_path, destination_config_path)
 
                 ocbinarydata_dir = os.path.join(self.temporary_dir, "OcBinaryData", "OcBinaryData-master")
-                background_picker_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets", "background_picker.icns")
                 if os.path.exists(ocbinarydata_dir):
                     for name in os.listdir(ocbinarydata_dir):
                         if name.startswith("."):
@@ -283,3 +283,41 @@ class gatheringFiles:
             print("")
             self.utils.request_input()
             return
+
+    def gather_lshw(self):
+        lshw_path = shutil.which("lshw")
+        if lshw_path:
+            return lshw_path
+
+        self.utils.head("Gathering Files")
+        print("")
+        print("Please wait for download lshw")
+        print("")
+
+        lshw_url = "https://www.ezix.org/software/files/lshw-B.02.19.tar.gz"
+        lshw_tar_path = os.path.join(self.temporary_dir, "lshw.tar.gz")
+        lshw_dir = os.path.join(self.temporary_dir, "lshw")
+
+        self.fetcher.download_and_save_file(lshw_url, lshw_tar_path)
+        self.utils.extract_tar_file(lshw_tar_path, lshw_dir)
+
+        lshw_source_dir = os.path.join(lshw_dir, "lshw-B.02.19")
+        subprocess.run(["make"], cwd=lshw_source_dir)
+        lshw_path = os.path.join(lshw_source_dir, "lshw")
+
+        if os.path.exists(lshw_path):
+            return lshw_path
+
+        print("Could not complete download lshw.")
+        print("Please install lshw manually and ensure it is in your PATH.")
+        print("")
+        self.utils.request_input()
+        return
+
+    def parse_lshw_json(self, lshw_output_path):
+        try:
+            with open(lshw_output_path, "r") as file:
+                lshw_data = json.load(file)
+            return lshw_data
+        except:
+            return None
